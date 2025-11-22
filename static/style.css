@@ -1,0 +1,59 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+body{
+    font-family: sans-serif;
+}
+.header{
+    height: 5rem;
+    width: 100vmax;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    color: white;
+    background-color: rgb(71, 71, 255);
+}
+#form{
+    height: 5rem;
+    width: 100vmax;
+    display: flex;
+    justify-content: space-between;
+    position: fixed;
+    bottom: 0;
+}
+#input{
+    border: none;
+    width: 85%;
+    letter-spacing: 2px;
+    font-size: 20px;
+    padding-left: 50px;
+}
+.submit {
+    color: white;
+    width: 15%;
+    background-color: rgb(71, 71, 255);
+    padding: 0 60px;
+    font-size: 35px;
+    border: none;
+}
+#messages{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding-left: 10px;
+    position: relative;
+    top: 6rem;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    font-size: 20px;
+    letter-spacing: 1px;
+}
+#messages li {
+    background-color: rgb(35, 35, 209);
+    color: white;
+    padding: 10px;
+    border-radius: 10px;
+}
