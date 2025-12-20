@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="register.css">
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous"></script>
+    <script src="auth.js" defer></script>
+</head>
+<body>
+    <form id="form">
+        <div class="input-div">
+            <p>Логін</p>
+            <input type="text" id="login" placeholder="Логін">
+        </div>
+        <div class="input-div">
+            <p>Пароль</p>
+            <input type="text" id="password" placeholder="Пароль">
+        </div>
+        <div class="input-div">
+            <p>Повторіть пароль</p>
+            <input type="text" id="repeat-password" placeholder="Повторіть пароль">
+        </div>
+        <button id="btn" type="submit">Submit</button>
+    </form>
+</body>
+</html>

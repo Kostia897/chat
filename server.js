@@ -1,6 +1,30 @@
 const http = require('http');
 const fs = require('fs')
 const path = require('path');
+const { Server } = require ("socket.io")
+const mysql = require('mysql2');
+
+
+const db = require('./database');
+
+
+
+const connection = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '1111',
+    database: 'chat'
+})
+
+const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root',
+    password: '1111',
+    database: 'chat'
+});
+
+const promisePool = pool.promise()
+
 
 const pathToIndex = path.join(__dirname, 'static', 'index.html');
 const indexHtmlFile = fs.readFileSync(pathToIndex);
@@ -11,19 +35,72 @@ const styleCssFile = fs.readFileSync(pathToStyle);
 const pathToScript = path.join(__dirname, 'static', 'script.js');
 const scriptJsFile = fs.readFileSync(pathToScript);
 
+const pathToRegisterHtml = path.join(__dirname, 'static', 'register.html');
+const registerHtml = fs.readFileSync(pathToRegisterHtml);
 
-const server = http.createServer((req, res) => {
+const authJsPath = path.join(__dirname, 'static', 'auth.js');
+const authJs = fs.readFileSync(authJsPath);
+
+const registerCssPath = path.join(__dirname, 'static', 'register.css');
+const registerCss = fs.readFileSync(registerCssPath);
+
+
+const server = http.createServer(async (req, res) => {
     if(req.url === '/') {
         return res.end(indexHtmlFile);
     }
-    if(req.url === '/style.css'){
+    else if(req.url === '/style.css'){
         return res.end(styleCssFile)
     }
-    if(req.url === '/script.js'){
+    else if(req.url === '/script.js'){
         return res.end(scriptJsFile)
     }
-    res.statusCode = 404;
-    return res.end('Error 404')
+    else if(req.url == '/messages' && req.method == 'GET'){
+        let messages = await db.getMessages()
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify(messages));
+    }
+    else if(req.url === '/register'){
+        return res.end(registerHtml)
+    }
+    else if(req.url === '/auth.js'){
+        return res.end(authJs)
+    }
+    else if(req.url == '/register.css'){
+        return res.end(registerCss)
+    }
+    else if(req.url === '/api/register'){
+        let data = '';
+        req.on('data', function(chunk) {
+            data += chunk;
+        });
+        req.on('end', function() {
+            console.log(data);
+            return res.end();
+        })
+    }
+    else if(res.statusCode == 404){
+        return res.end('Error 404')
+    }
+
+    
 })
 
 server.listen(3000)
+
+
+
+const io = new Server(server)
+
+io.on('connection', (socket) => {
+    let userNickname = 'user';
+    // console.log('a user connected. id - ' + socket.id)
+    socket.on('new_message', (message) => {
+        message = userNickname + ': ' + message
+        db.addmessage(message, 1)
+        io.emit('message', message);
+    })
+    socket.on('new_nickname', (nickname) => { 
+        userNickname = nickname
+    })
+})

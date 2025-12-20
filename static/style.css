@@ -15,6 +15,7 @@ body{
     top: 0;
     color: white;
     background-color: rgb(71, 71, 255);
+    z-index: 2;
 }
 #form{
     height: 5rem;
@@ -50,10 +51,17 @@ body{
     font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
     font-size: 20px;
     letter-spacing: 1px;
+    padding-bottom: 6rem;
 }
 #messages li {
     background-color: rgb(35, 35, 209);
     color: white;
     padding: 10px;
     border-radius: 10px;
+}
+#btn{
+    z-index: 2;
+    position: fixed;
+    right: 20%;
+    top: 2rem;
 }

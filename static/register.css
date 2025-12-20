@@ -1,0 +1,51 @@
+*{
+    padding: 0;
+    margin: 0;
+}
+
+body{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: sans-serif;
+}
+
+.input-div{
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: center;
+}
+
+p{
+    color: white;
+}
+
+input{
+    width: 400%;
+    letter-spacing: 1px;
+    padding: 5px;
+    border-radius: 7px;
+    border: none;
+}
+
+form{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60%;
+    gap: 10px;
+    background-color: rgb(35, 35, 209);
+    padding: 5px;
+    padding-top: 20px;
+}
+
+#btn{
+    width: min-content;
+    padding: 5px 20px;
+    background-color: orange;
+    color: white;
+    border-radius: 7px;
+    border: none;
+}
