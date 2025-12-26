@@ -47,26 +47,39 @@ module.exports = {
     getMessages: async () => {
         try{
             return await db.all(
-                `SELECT message_id, content, login, author_id from message 
+                `SELECT message_id, content, login, author_id FROM message 
                 JOIN user ON message.author_id = user.user_id`
             );
         } catch (dbError) {
             console.error(dbError);
         }
     },
-    addmessage: async (msg, userId) => {
+    addMessage: async (msg, userId) => {
         await db.run(
             `INSERT INTO message(content, author_id, dialog_id) VALUES (?,?,?)`,
             [msg, userId, 1]
         )
     },
-    userExists: async () => {
+    userExists: async (login) => {
         try{
-            return await db.all(
-                `SELECT `
-            )
+            const user = await db.all(
+                `SELECT * FROM user WHERE login = ?`,
+                [login]
+            );
+            return user.length > 0;
         } catch (dbError) {
-            console.log(dbError)
+            console.log(dbError);
+            return false;
+        }
+    },
+    addUser: async (login, password) => {
+        try{
+            await db.run(`
+                INSERT INTO user(login, password) VALUES(?, ?);`,
+                [login, password]
+            );
+        } catch (dbError) {
+            console.log(dbError);
         }
     }
 }

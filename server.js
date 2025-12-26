@@ -2,28 +2,29 @@ const http = require('http');
 const fs = require('fs')
 const path = require('path');
 const { Server } = require ("socket.io")
-const mysql = require('mysql2');
+// const mysql = require('mysql2');
 
 
 const db = require('./database');
+const { json } = require('stream/consumers');
 
 
 
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '1111',
-    database: 'chat'
-})
+// const connection = mysql.createConnection({
+//     host: 'localhost',
+//     user: 'root',
+//     password: '1111',
+//     database: 'chat'
+// })
 
-const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: '1111',
-    database: 'chat'
-});
+// const pool = mysql.createPool({
+//     host: 'localhost',
+//     user: 'root',
+//     password: '1111',
+//     database: 'chat'
+// });
 
-const promisePool = pool.promise()
+// const promisePool = pool.promise()
 
 
 const pathToIndex = path.join(__dirname, 'static', 'index.html');
@@ -74,9 +75,13 @@ const server = http.createServer(async (req, res) => {
         req.on('data', function(chunk) {
             data += chunk;
         });
-        req.on('end', function() {
-            console.log(data);
-            return res.end();
+        req.on('end', async function() {
+            data = JSON.parse(data);
+            const exists = await db.userExists(data.content.login);
+            if(!exists){
+                db.addUser(data.content.login, data.content.password)
+            }
+            return res.end(JSON.stringify(exists));
         })
     }
     else if(res.statusCode == 404){
@@ -97,7 +102,7 @@ io.on('connection', (socket) => {
     // console.log('a user connected. id - ' + socket.id)
     socket.on('new_message', (message) => {
         message = userNickname + ': ' + message
-        db.addmessage(message, 1)
+        db.addMessage(message, 1)
         io.emit('message', message);
     })
     socket.on('new_nickname', (nickname) => { 
