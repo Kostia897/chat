@@ -1,4 +1,5 @@
 const fs = require('fs')
+const crypto = require('crypto')
 
 const dbFile = "./chat.db";
 const exists = fs.existsSync(dbFile);
@@ -81,5 +82,17 @@ module.exports = {
         } catch (dbError) {
             console.log(dbError);
         }
+    },
+    getAuthToken: async (user) => {
+        const candidate = await db.all(`SELECT * FROM user WHERE login = ?`, [user.login]);
+        if(!candidate.length) {
+            throw 'Wrong login';
+        }
+        if(candidate[0].password !== user.password) {
+            throw 'Wrong password';
+        }
+        console.log(candidate[0])
+        const token = candidate[0].user_id + '.' + candidate[0].login + '.' + crypto.randomBytes(20).toString('hex');
+        return token
     }
 }

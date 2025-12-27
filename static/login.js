@@ -2,9 +2,9 @@ document.getElementById("form").addEventListener('submit', async function(e){
     e.preventDefault();
     let login = document.getElementById('login').value
     let password = document.getElementById('password').value
-    let repeatPassword = document.getElementById("repeat-password").value
+    
 
-    if (password == repeatPassword && password != '' && login != ''){
+    if (password != '' && login != ''){
         let data = {
             'login': login,
             'password': password
@@ -14,8 +14,15 @@ document.getElementById("form").addEventListener('submit', async function(e){
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({content: data})
         });
-
-        // const exists = await res.json();
+        console.log(res)
+        if(res.status === 200){
+            const token = await res.json();
+            document.cookie = `token=${token}`;
+            window.location.assign('/');
+        }
+        else {
+            return alert (res);
+        }
         
     }else{
         alert('error')

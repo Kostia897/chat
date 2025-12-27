@@ -3,12 +3,11 @@ const fs = require('fs')
 const path = require('path');
 const { Server } = require ("socket.io")
 // const mysql = require('mysql2');
-
-
+const crypto = require('crypto')
 const db = require('./database');
 const { json } = require('stream/consumers');
 
-
+let validAuthTokens = []
 
 // const connection = mysql.createConnection({
 //     host: 'localhost',
@@ -45,6 +44,11 @@ const authJs = fs.readFileSync(authJsPath);
 const registerCssPath = path.join(__dirname, 'static', 'register.css');
 const registerCss = fs.readFileSync(registerCssPath);
 
+const loginHtmlPath = path.join(__dirname, 'static', 'login.html');
+const loginHtml = fs.readFileSync(loginHtmlPath);
+
+const loginJsPath = path.join(__dirname, 'static', 'login.js');
+const loginJs = fs.readFileSync(loginJsPath);
 
 const server = http.createServer(async (req, res) => {
     if(req.url === '/') {
@@ -69,6 +73,32 @@ const server = http.createServer(async (req, res) => {
     }
     else if(req.url == '/register.css'){
         return res.end(registerCss)
+    }
+    else if(req.url == '/login'){
+        return res.end(loginHtml)
+    }
+    else if(req.url === '/login.js'){
+        return res.end(loginJs)
+    }
+    else if(req.url === '/api/login'){
+        let data = '';
+        req.on('data', function(chunk) {
+            data += chunk;
+        });
+        req.on('end', async function() {
+            data = JSON.parse(data);
+            const user = data.content
+            try {
+                const token = await db.getAuthToken(user);
+                validAuthTokens.push(token);
+                res.writeHead(200)
+                res.end(JSON.stringify(token));
+            }
+            catch(e) {
+                res.writeHead(500);
+                return res.end('Error: ' + e);
+            }
+        })
     }
     else if(req.url === '/api/register'){
         let data = '';
