@@ -20,20 +20,31 @@ dbWrapper
                     `CREATE TABLE user(
                         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
                         login TEXT,
-                        password TEXT
+                        password TEXT NOT NULL,
+                        avatar TEXT NOT NULL,
+                        salt TEXT NOT NULL
                     );`
                 );
-                await db.run(`INSERT INTO user(login, password) VALUES('robouser1', 'q1q2q3');`);
-                await db.run(`CREATE TABLE message(
+                await db.run(
+                    `CREATE TABLE dialog(
+                        dialog_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        first_user_id INTEGER NOT NULL,
+                        second_user_id INTEGER NOT NULL,
+                        CONSTRAINT fk_first_user FOREIGN KEY (first_user_id) REFERENCES user(user_id),
+                        CONSTRAINT fk_second_user FOREIGN KEY (second_user_id) REFERENCES user(user_id)
+                    );`
+                );
+                await db.run(
+                    `CREATE TABLE message(
                         message_id INTEGER PRIMARY KEY AUTOINCREMENT,
                         content VARCHAR(1000) NOT NULL,
                         author_id INTEGER NOT NULL,
                         dialog_id INTEGER NOT NULL,
                         CONSTRAINT fk_author_id FOREIGN KEY (author_id) REFERENCES user(user_id),
-                        CONSTRAINT fk_dialog_id FOREIGN KEY (dialog_id) REFERENCES dialog(id)
-                    )`);
+                        CONSTRAINT fk_dialog_id FOREIGN KEY (dialog_id) REFERENCES dialog(dialog_id)
+                    );`
+                );
             } else {
-                // await db.run(`INSERT INTO user(login, password) VALUES('robouser', 'q1q2q3');`);
                 console.log(await db.all("SELECT * from user"))
             }
         } catch (dbError) {
@@ -48,18 +59,35 @@ module.exports = {
     getMessages: async () => {
         try{
             return await db.all(
-                `SELECT message_id, content, login, author_id FROM message 
+                `SELECT message_id, content, login, author_id, dialog_id
+                FROM message 
                 JOIN user ON message.author_id = user.user_id`
             );
         } catch (dbError) {
             console.error(dbError);
         }
     },
-    addMessage: async (msg, userId) => {
-        await db.run(
-            `INSERT INTO message(content, author_id, dialog_id) VALUES (?,?,?)`,
-            [msg, userId, 1]
-        )
+    getMessagesFromDialog: async (dialogId) => {
+        try{
+            return await db.all(
+                `SELECT message_id, content, login, author_id, dialog_id
+                FROM message 
+                JOIN user ON message.author_id = user.user_id AND message.dialog_id = ?
+                ;`, [dialogId]
+            );
+        } catch (dbError) {
+            console.error(dbError);
+        }
+    },
+    addMessage: async (msg, userId, dialogId) => {
+        try{
+            await db.run(
+                `INSERT INTO message(content, author_id, dialog_id) VALUES (?,?,?)`,
+                [msg, userId, dialogId]
+            )
+        } catch (dbError) {
+            console.error(dbError);
+        }
     },
     userExists: async (login) => {
         try{
@@ -73,26 +101,90 @@ module.exports = {
             return false;
         }
     },
-    addUser: async (login, password) => {
+    addUser: async (login, password, avatar, salt) => {
         try{
             await db.run(`
-                INSERT INTO user(login, password) VALUES(?, ?);`,
-                [login, password]
+                INSERT INTO user(login, password, avatar, salt) VALUES(?, ?, ?, ?);`,
+                [login, password, avatar, salt]
             );
         } catch (dbError) {
             console.log(dbError);
         }
     },
     getAuthToken: async (user) => {
-        const candidate = await db.all(`SELECT * FROM user WHERE login = ?`, [user.login]);
-        if(!candidate.length) {
-            throw 'Wrong login';
+        try{
+            const candidate = await db.all(`SELECT * FROM user WHERE login = ?`, [user.login]);
+            if(!candidate.length) {
+                throw 'Wrong login';
+            }
+            const password = crypto.pbkdf2Sync(user.password, candidate[0].salt, 1000, 64, `sha512`).toString(`hex`);
+
+            if(candidate[0].password !== password) {
+                throw 'Wrong password';
+            }
+            console.log(candidate[0])
+            const token = candidate[0].user_id + '.' + candidate[0].login + '.' + crypto.randomBytes(20).toString('hex');
+            return token;
+        } catch (dbError) {
+            console.log(dbError);
         }
-        if(candidate[0].password !== user.password) {
-            throw 'Wrong password';
+    },
+    getDialogs: async (userId) => {
+        try{
+            return await db.all(
+                `SELECT dialog_id, user_id, login
+                FROM dialog
+                JOIN user ON (user.user_id = first_user_id AND dialog.second_user_id = ?)
+                          OR (user.user_id = second_user_id AND dialog.first_user_id = ?)
+                ;`,
+                [userId, userId]
+            );
+        } catch (dbError) {
+            console.log(dbError);
         }
-        console.log(candidate[0])
-        const token = candidate[0].user_id + '.' + candidate[0].login + '.' + crypto.randomBytes(20).toString('hex');
-        return token
+    },
+    findUserByLogin: async (login) => {
+        try{
+            return await db.get(
+                `SELECT user_id, login, avatar FROM user WHERE login = ?`,
+                [login]
+            );
+        } catch (dbError) {
+            console.log(dbError);
+        }
+    },
+    getOrCreateDialog: async (user1, user2) => {
+        try{
+            const [first, second] = user1 < user2 ? [user1, user2] : [user2, user1];
+
+            const dialog = await db.get(
+                `SELECT dialog_id FROM dialog
+                WHERE first_user_id = ? AND second_user_id = ?;`,
+                [first, second]
+            );
+
+            if (dialog) return dialog.dialog_id;
+
+            const res = await db.run(
+                `INSERT INTO dialog(first_user_id, second_user_id)
+                VALUES (?, ?);`,
+                [first, second]
+            );
+
+            return res.lastID;
+        } catch (dbError) {
+            console.log(dbError);
+        }
+    },
+    getAvatarUrl: async (userId) => {
+        try{
+            return await db.get(
+                `SELECT avatar FROM user WHERE user_id = ? 
+                ;`,
+                [userId]
+            );
+        } catch (dbError) {
+            console.log(dbError);
+        }
     }
 }

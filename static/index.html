@@ -6,11 +6,16 @@
     <title>Document</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3/dist/js.cookie.min.js"></script>
     <script src="script.js" defer></script>
 </head>
 <body>
-    <h1 class="header">RoboChat</h1>
-    <button id="btn" onclick="changeNickname()">Change Nick</button>
+    <header>
+        <button id="deleteCookies">Leave</button>
+        <h1 class="header">RoboChat</h1>
+        <form id="searchForm"><input type="text" id="searchInput" placeholder="search"></form>
+    </header>
+    <ul id="dialogs"></ul>
     <ul id="messages"></ul>
     <form id="form">
         <input type="text" id="input" placeholder="Enter message...">

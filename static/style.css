@@ -1,67 +1,125 @@
 *{
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
 }
 body{
     font-family: sans-serif;
-}
-.header{
-    height: 5rem;
-    width: 100vmax;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    position: fixed;
-    top: 0;
-    color: white;
-    background-color: rgb(71, 71, 255);
-    z-index: 2;
+    flex-direction: column;
+    height: 100vh;
+    margin: 0;
 }
 #form{
     height: 5rem;
-    width: 100vmax;
+    width: 100%;
     display: flex;
     justify-content: space-between;
     position: fixed;
     bottom: 0;
 }
 #input{
+    flex: 1;
+    resize: none;
     border: none;
-    width: 85%;
     letter-spacing: 2px;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
     font-size: 20px;
-    padding-left: 50px;
+    padding-left: 20px;
 }
 .submit {
     color: white;
-    width: 15%;
+    width: 25%;
     background-color: rgb(71, 71, 255);
-    padding: 0 60px;
     font-size: 35px;
     border: none;
 }
 #messages{
+    flex-grow: 1;
+    margin-left: 30%;
+    margin-top: 5rem;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
-    padding-left: 10px;
-    position: relative;
-    top: 6rem;
+    width: 70%;
+    padding: 10px;
     font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
     font-size: 20px;
     letter-spacing: 1px;
     padding-bottom: 6rem;
 }
-#messages li {
+#messages li{
     background-color: rgb(35, 35, 209);
     color: white;
     padding: 10px;
     border-radius: 10px;
+    max-width: 60%;
+    list-style: none;
 }
 #btn{
-    z-index: 2;
-    position: fixed;
-    right: 20%;
     top: 2rem;
 }
+
+.li-right{
+    align-self: flex-end;
+}
+
+#dialogs{
+    position: fixed;
+    left: 0;
+    top: 5rem;
+    width: 30%;
+    border-right: 2px solid white;
+    border-bottom: 2px solid white;
+    border-top: 2px solid white;
+    background-color: rgb(71, 71, 255);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 20px;
+    padding-top: 1rem;
+    letter-spacing: 1px;
+    box-sizing: border-box;
+    height: calc(100vh - 10rem);
+    overflow-y: auto;
+}
+
+#dialog{
+    width: 90%;
+    height: 40px;
+    text-align: center;
+    border: 3px solid rgb(71, 71, 255);
+    background-color: rgb(255, 255, 255);
+    color: rgb(71, 71, 255);
+    padding: 5px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+#dialog:hover{
+    cursor: pointer;
+}
+
+header{
+    height: 5rem;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    color: white;
+    background-color: rgb(71, 71, 255);
+}
+
+#avatar{
+    height: 30px;
+    width: 30px;
+    border-radius: 100%
+}
+

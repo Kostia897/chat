@@ -2,13 +2,15 @@ const http = require('http');
 const fs = require('fs')
 const path = require('path');
 const { Server } = require ("socket.io")
-// const mysql = require('mysql2');
 const crypto = require('crypto')
 const db = require('./database');
 const { json } = require('stream/consumers');
+const cookie = require('cookie')
 
 let validAuthTokens = []
 
+
+// const mysql = require('mysql2');
 // const connection = mysql.createConnection({
 //     host: 'localhost',
 //     user: 'root',
@@ -50,11 +52,17 @@ const loginHtml = fs.readFileSync(loginHtmlPath);
 const loginJsPath = path.join(__dirname, 'static', 'login.js');
 const loginJs = fs.readFileSync(loginJsPath);
 
+const soundPath = path.join(__dirname, 'static', 'sounds', 'sound.mp3');
+const sound = fs.readFileSync(soundPath);
+
+const sound2Path = path.join(__dirname, 'static', 'sounds', 'sound2.mp3');
+const sound2 = fs.readFileSync(sound2Path);
+
 const server = http.createServer(async (req, res) => {
-    if(req.url === '/') {
-        return res.end(indexHtmlFile);
-    }
-    else if(req.url === '/style.css'){
+    // if(req.url === '/') {
+    //     return res.end(indexHtmlFile);
+    // }
+    if(req.url === '/style.css'){
         return res.end(styleCssFile)
     }
     else if(req.url === '/script.js'){
@@ -79,6 +87,12 @@ const server = http.createServer(async (req, res) => {
     }
     else if(req.url === '/login.js'){
         return res.end(loginJs)
+    }
+    else if(req.url === '/sound.mp3'){
+        return res.end(sound)
+    }
+    else if(req.url === '/sound2.mp3'){
+        return res.end(sound2)
     }
     else if(req.url === '/api/login'){
         let data = '';
@@ -109,15 +123,68 @@ const server = http.createServer(async (req, res) => {
             data = JSON.parse(data);
             const exists = await db.userExists(data.content.login);
             if(!exists){
-                db.addUser(data.content.login, data.content.password)
+                const salt = crypto.randomBytes(16).toString('hex')
+                const password = crypto.pbkdf2Sync(data.content.password, salt, 1000, 64, `sha512`).toString(`hex`);
+                await db.addUser(data.content.login, password, data.content.avatar, salt)
             }
             return res.end(JSON.stringify(exists));
         })
     }
-    else if(res.statusCode == 404){
-        return res.end('Error 404')
+    else if(req.url === '/dialogs' && req.method === 'GET'){
+        const credentionals = guarded(req, res);
+        if (!credentionals) return;
+        const dialogs = await db.getDialogs(credentionals.user_id);
+        res.writeHead(200)
+        res.end(JSON.stringify(dialogs));
     }
+    else if(req.url.startsWith('/messages?dialog=') && req.method === 'GET'){
+        const credentionals = guarded(req, res);
+        if (!credentionals) return;
 
+        const dialogId = req.url.split('=')[1];
+
+        const messages = await db.getMessagesFromDialog(dialogId)
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify(messages));
+    }
+    else if(req.url.startsWith('/getAvatarUrl?userId=') && req.method === 'GET'){
+        const credentionals = guarded(req, res);
+        if (!credentionals) return;
+
+        const userId = req.url.split('=')[1];
+
+        const avatarUrl = await db.getAvatarUrl(userId)
+        console.log(avatarUrl)
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({ avatar: avatarUrl.avatar }));
+    }
+    else if(req.url === '/api/find_or_create_dialog' && req.method === 'POST'){
+        let data = '';
+        req.on('data', function(chunk) {
+            data += chunk;
+        });
+        req.on('end', async () => {
+            const credentionals = guarded(req, res);
+            if (!credentionals) return;
+
+            const { login } = JSON.parse(data);
+            const user = await db.findUserByLogin(login);
+
+            if(!user) { 
+                res.writeHead(404); 
+                return res.end('User not found'); 
+            }
+
+            const dialogId = await db.getOrCreateDialog(parseInt(credentionals.user_id), user.user_id);
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            return res.end(JSON.stringify({ dialog_id: dialogId }));
+        });
+    }
+    else {
+        guarded(req,res) 
+    }
+    
     
 })
 
@@ -127,15 +194,59 @@ server.listen(3000)
 
 const io = new Server(server)
 
-io.on('connection', (socket) => {
-    let userNickname = 'user';
-    // console.log('a user connected. id - ' + socket.id)
-    socket.on('new_message', (message) => {
-        message = userNickname + ': ' + message
-        db.addMessage(message, 1)
-        io.emit('message', message);
-    })
-    socket.on('new_nickname', (nickname) => { 
-        userNickname = nickname
-    })
+io.use((socket, next) => {
+    const cookie = socket.handshake.auth.cookie;
+    const credentionals = getCredentionals(cookie);
+    if(!credentionals) {
+        return next(new Error("no auth"));
+    }
+    socket.credentionals = credentionals;
+    next();
 })
+
+io.on('connection', (socket) => {
+    const userNickname = socket.credentionals.login;
+    const userId = socket.credentionals.user_id;
+
+    socket.on('new_message', async (content, dialogId) => {
+        await db.addMessage(content, userId, dialogId);
+
+        io.emit('message', {
+            content: content,
+            author_id: userId,
+            dialog_id: dialogId,
+            login: userNickname 
+        });
+    });
+})
+
+function guarded(req,res) {
+    const credentionals = getCredentionals(req.headers?.cookie);
+    if(!credentionals) {
+        res.writeHead(302, {'Location': '/login'});
+        return res.end()
+    }
+    if(req.url) {
+        switch(req.url) {
+            case '/': return res.end(indexHtmlFile);
+            case '/script.js': return res.end(scriptJsFile)
+        }
+    }
+    return credentionals
+}
+
+function getCredentionals(cookies = ""){
+    const parsedCookies = cookie.parse(cookies);
+    const token = parsedCookies?.token;
+
+    if(!token || !validAuthTokens.includes(token)){
+        return null;
+    }
+    const [user_id, login] = token.split(".");
+
+    if(!user_id || !login){
+        return null;
+    }
+
+    return{user_id, login}
+}
