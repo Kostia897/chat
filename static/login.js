@@ -14,18 +14,18 @@ document.getElementById("form").addEventListener('submit', async function(e){
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({content: data})
         });
-        console.log(res)
         if(res.status === 200){
             const token = await res.json();
             document.cookie = `token=${token}`;
             window.location.assign('/');
         }
         else {
-            return alert (res);
+            const error = await res.json()
+            alert(error.message);  
         }
         
     }else{
-        alert('error')
+        alert('Wrong login or password')
     }
 
 })

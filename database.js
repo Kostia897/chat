@@ -112,22 +112,19 @@ module.exports = {
         }
     },
     getAuthToken: async (user) => {
-        try{
-            const candidate = await db.all(`SELECT * FROM user WHERE login = ?`, [user.login]);
-            if(!candidate.length) {
-                throw 'Wrong login';
-            }
-            const password = crypto.pbkdf2Sync(user.password, candidate[0].salt, 1000, 64, `sha512`).toString(`hex`);
-
-            if(candidate[0].password !== password) {
-                throw 'Wrong password';
-            }
-            console.log(candidate[0])
-            const token = candidate[0].user_id + '.' + candidate[0].login + '.' + crypto.randomBytes(20).toString('hex');
-            return token;
-        } catch (dbError) {
-            console.log(dbError);
+        const candidate = await db.all(`SELECT * FROM user WHERE login = ?`, [user.login]);
+        if(!candidate.length) {
+            throw new Error('Wrong login');
         }
+        
+        const password = crypto.pbkdf2Sync(user.password, candidate[0].salt, 1000, 64, `sha512`).toString(`hex`);
+
+        if(candidate[0].password !== password) {
+            throw new Error('Wrong password');
+        }
+        console.log(candidate[0])
+        const token = candidate[0].user_id + '.' + candidate[0].login + '.' + crypto.randomBytes(20).toString('hex');
+        return token;
     },
     getDialogs: async (userId) => {
         try{
@@ -153,7 +150,7 @@ module.exports = {
             console.log(dbError);
         }
     },
-    getOrCreateDialog: async (user1, user2) => {
+    getDialog: async (user1, user2) => {
         try{
             const [first, second] = user1 < user2 ? [user1, user2] : [user2, user1];
 
@@ -163,7 +160,14 @@ module.exports = {
                 [first, second]
             );
 
-            if (dialog) return dialog.dialog_id;
+            return dialog;
+        } catch (dbError) {
+            console.log(dbError);
+        }
+    },
+    createDialog: async (user1, user2) => {
+        try{
+            const [first, second] = user1 < user2 ? [user1, user2] : [user2, user1];
 
             const res = await db.run(
                 `INSERT INTO dialog(first_user_id, second_user_id)

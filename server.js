@@ -110,7 +110,7 @@ const server = http.createServer(async (req, res) => {
             }
             catch(e) {
                 res.writeHead(500);
-                return res.end('Error: ' + e);
+                return res.end(JSON.stringify({message: e.message }));
             }
         })
     }
@@ -176,9 +176,14 @@ const server = http.createServer(async (req, res) => {
                 return res.end('User not found'); 
             }
 
-            const dialogId = await db.getOrCreateDialog(parseInt(credentionals.user_id), user.user_id);
+            let dialogId = await db.getDialog(parseInt(credentionals.user_id), user.user_id);
+
+            if (!dialogId) {
+                dialogId = await db.createDialog(parseInt(credentionals.user_id), user.user_id)
+            };
+
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-            return res.end(JSON.stringify({ dialog_id: dialogId }));
+            return res.end(JSON.stringify({ dialog_id: dialogId.dialog_id }));
         });
     }
     else {

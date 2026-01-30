@@ -11,6 +11,7 @@ let list = document.getElementById('messages')
 let user_id = null;
 let login = null;
 let currentDialogId = null;
+let dialogs = '';
 
 document.getElementById('deleteCookies').addEventListener('click', function(e){
     e.preventDefault();
@@ -37,6 +38,19 @@ messageSound2.preload = 'auto';
 socket.on('message', (message) => {
     if(message.dialog_id != currentDialogId) return;
 
+    let is_dialog_exists = false;
+
+    for(let i = 0; i < dialogs.length; i++){
+        if(message.dialog_id == dialogs[i].dialog_id){
+            is_dialog_exists = true;
+            break
+        }
+    }
+
+    if(!is_dialog_exists){
+        loadDialogs()
+    }
+
     if (user_id == message.author_id) {
         messageSound2.currentTime = 0;
         messageSound2.play();
@@ -48,7 +62,6 @@ socket.on('message', (message) => {
     }
     window.scrollTo(0, document.body.scrollHeight)
 })
-
 
 async function loadMessages(dialogId) {
     currentDialogId = dialogId;
@@ -74,7 +87,7 @@ async function loadMessages(dialogId) {
 
 async function loadDialogs() {
     const res = await fetch('/dialogs');
-    const dialogs = await res.json();
+    dialogs = await res.json();
     const dialogsList = document.getElementById('dialogs');
     dialogsList.innerHTML = '';
 

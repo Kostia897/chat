@@ -22,7 +22,8 @@ document.getElementById("form").addEventListener('submit', async function(e){
             window.location.assign('/login');
         }
     }else{
-        alert('Введіть логін і пароль')
+        const error = await res.json();
+        alert(error.message);
     }
 
 })
