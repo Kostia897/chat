@@ -22,7 +22,8 @@ dbWrapper
                         login TEXT,
                         password TEXT NOT NULL,
                         avatar TEXT NOT NULL,
-                        salt TEXT NOT NULL
+                        salt TEXT NOT NULL,
+                        lastOnline TEXT NOT NULL
                     );`
                 );
                 await db.run(
@@ -38,6 +39,7 @@ dbWrapper
                     `CREATE TABLE message(
                         message_id INTEGER PRIMARY KEY AUTOINCREMENT,
                         content VARCHAR(1000) NOT NULL,
+                        date TEXT NOT NULL,
                         author_id INTEGER NOT NULL,
                         dialog_id INTEGER NOT NULL,
                         CONSTRAINT fk_author_id FOREIGN KEY (author_id) REFERENCES user(user_id),
@@ -70,7 +72,7 @@ module.exports = {
     getMessagesFromDialog: async (dialogId) => {
         try{
             return await db.all(
-                `SELECT message_id, content, login, author_id, dialog_id
+                `SELECT message_id, content, date, login, author_id, dialog_id
                 FROM message 
                 JOIN user ON message.author_id = user.user_id AND message.dialog_id = ?
                 ;`, [dialogId]
@@ -79,11 +81,11 @@ module.exports = {
             console.error(dbError);
         }
     },
-    addMessage: async (msg, userId, dialogId) => {
+    addMessage: async (msg, userId, dialogId, date) => {
         try{
             await db.run(
-                `INSERT INTO message(content, author_id, dialog_id) VALUES (?,?,?)`,
-                [msg, userId, dialogId]
+                `INSERT INTO message(content, author_id, dialog_id, date) VALUES (?,?,?,?)`,
+                [msg, userId, dialogId, date]
             )
         } catch (dbError) {
             console.error(dbError);
@@ -103,9 +105,10 @@ module.exports = {
     },
     addUser: async (login, password, avatar, salt) => {
         try{
+            let now = new Date();
             await db.run(`
-                INSERT INTO user(login, password, avatar, salt) VALUES(?, ?, ?, ?);`,
-                [login, password, avatar, salt]
+                INSERT INTO user(login, password, avatar, salt, lastOnline) VALUES(?, ?, ?, ?, ?);`,
+                [login, password, avatar, salt, now]
             );
         } catch (dbError) {
             console.log(dbError);
@@ -189,6 +192,26 @@ module.exports = {
             );
         } catch (dbError) {
             console.log(dbError);
+        }
+    },
+    getUserStatus: async (userId) => {
+        try{
+            return await db.get(
+                `SELECT lastOnline FROM user WHERE user_id = ?;`,
+                [userId]
+            )
+        } catch (dbError) {
+            console.log(dbError)
+        }
+    },
+    updateLastOnline: async (userId, lastOnline) => {
+        try{
+            return await db.run(
+                'UPDATE user SET lastOnline = ? WHERE user_id = ?',
+                [lastOnline, userId]
+            ); 
+        } catch (dbError) {
+            console.log(dbError)
         }
     }
 }

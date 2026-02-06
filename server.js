@@ -8,7 +8,7 @@ const { json } = require('stream/consumers');
 const cookie = require('cookie')
 
 let validAuthTokens = []
-
+let onlineUsers = new Map();
 
 // const mysql = require('mysql2');
 // const connection = mysql.createConnection({
@@ -31,9 +31,6 @@ let validAuthTokens = []
 const pathToIndex = path.join(__dirname, 'static', 'index.html');
 const indexHtmlFile = fs.readFileSync(pathToIndex);
 
-const pathToStyle = path.join(__dirname, 'static', 'style.css');
-const styleCssFile = fs.readFileSync(pathToStyle);
-
 const pathToScript = path.join(__dirname, 'static', 'script.js');
 const scriptJsFile = fs.readFileSync(pathToScript);
 
@@ -42,9 +39,6 @@ const registerHtml = fs.readFileSync(pathToRegisterHtml);
 
 const authJsPath = path.join(__dirname, 'static', 'auth.js');
 const authJs = fs.readFileSync(authJsPath);
-
-const registerCssPath = path.join(__dirname, 'static', 'register.css');
-const registerCss = fs.readFileSync(registerCssPath);
 
 const loginHtmlPath = path.join(__dirname, 'static', 'login.html');
 const loginHtml = fs.readFileSync(loginHtmlPath);
@@ -155,7 +149,6 @@ const server = http.createServer(async (req, res) => {
         const userId = req.url.split('=')[1];
 
         const avatarUrl = await db.getAvatarUrl(userId)
-        console.log(avatarUrl)
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         return res.end(JSON.stringify({ avatar: avatarUrl.avatar }));
     }
@@ -186,6 +179,23 @@ const server = http.createServer(async (req, res) => {
             return res.end(JSON.stringify({ dialog_id: dialogId.dialog_id }));
         });
     }
+    else if(req.url.startsWith('/status?user=') && req.method === 'GET'){
+        const credentionals = guarded(req, res);
+        if (!credentionals) return;
+        
+        let userStatus;
+        const userId = req.url.split('=')[1];
+
+        if(onlineUsers.get(userId)){
+            userStatus = 'Online';
+        } else {
+            const res = await db.getUserStatus(userId);
+            userStatus = res.lastOnline;
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({user_status: userStatus}));
+    }
     else {
         guarded(req,res) 
     }
@@ -212,16 +222,28 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
     const userNickname = socket.credentionals.login;
     const userId = socket.credentionals.user_id;
+    io.emit('user_disconnect_or_connect');
+
+    onlineUsers.set(userId, socket.id)
 
     socket.on('new_message', async (content, dialogId) => {
-        await db.addMessage(content, userId, dialogId);
-
+        const now = new Date().toISOString();
+        await db.addMessage(content, userId, dialogId, now);
+    
         io.emit('message', {
             content: content,
             author_id: userId,
             dialog_id: dialogId,
-            login: userNickname 
+            login: userNickname,
+            date: now
         });
+    });
+
+    socket.on('disconnect', async (reason) => {
+        const lastOnline = new Date();
+        onlineUsers.delete(userId);
+        await db.updateLastOnline(userId, lastOnline);
+        io.emit('user_disconnect_or_connect');
     });
 })
 

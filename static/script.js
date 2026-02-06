@@ -51,16 +51,22 @@ socket.on('message', (message) => {
         loadDialogs()
     }
 
+    let date = new Date(message.date);
+
     if (user_id == message.author_id) {
         messageSound2.currentTime = 0;
         messageSound2.play();
-        list.innerHTML += `<li class="li-right">${message.content}</li>`
+        list.innerHTML += `<li class="li-right">${message.content} <p class='date'>${date.toLocaleString()}</p></li>`
     } else {
         messageSound.currentTime = 0;
         messageSound.play();
-        list.innerHTML += `<li>${message.content}</li>`
+        list.innerHTML += `<li>${message.content} <p class='date'>${date.toLocaleString()}</p></li>`
     }
     window.scrollTo(0, document.body.scrollHeight)
+})
+
+socket.on('user_disconnect_or_connect', () => {
+    loadDialogs()
 })
 
 async function loadMessages(dialogId) {
@@ -74,11 +80,12 @@ async function loadMessages(dialogId) {
     [user_id, login] = token.split('.');
 
     messages.forEach(message => {
+        let date = new Date(message.date);
         if( user_id == message.author_id ){
-            list.innerHTML += `<li class="li-right">${message.content}</li>`
+            list.innerHTML += `<li class="li-right">${message.content} <p class='date'>${date.toLocaleString()}</p></li>`
         } else{
             console.log(message.author_id)
-            list.innerHTML += `<li>${message.content}</li>`
+            list.innerHTML += `<li>${message.content} <p class='date'>${date.toLocaleString()}</p></li>`
         }
     }
 );
@@ -102,7 +109,7 @@ async function loadDialogs() {
         const res2 = await fetch(`/getAvatarUrl?userId=${dialog.user_id}`);
         const data2 = await res2.json();
         
-        const avatarUrl = data2.avatar
+        const avatarUrl = data2.avatar;
 
         if(avatarUrl){
             avatar.src = avatarUrl;
@@ -111,12 +118,27 @@ async function loadDialogs() {
         }
 
         li.appendChild(avatar);
+
+
+        const status = document.createElement('p');
+        status.id = "onlineStatus";
+
+        const res3 = await fetch(`/status?user=${dialog.user_id}`);
+        const data3 = await res3.json();
+        if (data3.user_status == 'Online'){
+            status.textContent = data3.user_status;
+        }else{
+            const date = new Date(Number(data3.user_status));
+            status.textContent = date.toLocaleString();
+        }
+
+        li.appendChild(status);
+
         li.addEventListener('click', () => loadMessages(dialog.dialog_id));
         dialogsList.appendChild(li);
     });
 }
 
-loadDialogs();
 
 document.getElementById('searchForm').addEventListener('submit', async (e) => {
     e.preventDefault();
